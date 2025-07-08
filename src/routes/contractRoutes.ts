@@ -1,3 +1,6 @@
+/**
+ * 这是进行合约交互的路由文件
+ */
 import { JsonRpcProvider, Wallet, Contract, parseEther } from 'ethers';
 import { Router, Request, Response, NextFunction } from 'express';
 import token from '../abi/abi.json';
@@ -5,7 +8,7 @@ import token from '../abi/abi.json';
 const abi = token.abi;
 const router = Router();
 
-router.post('/sendTx', (req: Request, res: Response, next: NextFunction) => {
+router.post('/', (req: Request, res: Response, next: NextFunction) => {
   (async () => {
     const { network, amount, recipient } = req.body;
 
@@ -25,7 +28,7 @@ router.post('/sendTx', (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ success: false, error: `缺少参数: ${missingParam}` });
     }
 
-    // 根据 network 选择 rpc
+    // 根据 network 选择 rpc    
     const rpcMap: Record<string, string> = {
       ethereum: 'https://eth-sepolia.g.alchemy.com/v2/NqV4OiKFv5guVW6t0Gd-HUyKurubau5L',
     //   goerli: 'https://goerli.infura.io/v3/你的key',
