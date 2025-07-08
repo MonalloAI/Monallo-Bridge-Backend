@@ -1,7 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import testuserRoutes from './routes/testuserRoutes';
+import lockRoutes from './routes/lockRoutes';
 import contractRoutes from './routes/contractRoutes';
 
 dotenv.config();
@@ -11,7 +11,7 @@ app.use(express.json());
 
 app.use('/api/contract', contractRoutes);
 // 路由直接连接在
-app.use('/api/test', testuserRoutes);
+app.use('/api', lockRoutes);
 // 连接数据库
 mongoose.connect(process.env.MONGO_URI || '', {
 })
