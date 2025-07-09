@@ -1,63 +1,81 @@
 /**
- * 这是进行合约交互的路由文件
+ * 锁币路由：执行合约交互并存储记录
  */
-import { JsonRpcProvider, Wallet, Contract, parseEther } from 'ethers';
 import { Router, Request, Response, NextFunction } from 'express';
+import { JsonRpcProvider, Wallet, Contract, parseEther } from 'ethers';
+import dotenv from 'dotenv';
 import token from '../abi/abi.json';
+import LockRecord from '../models/LockRecord'; 
+import { asyncHandler } from '../utils/asyncHandler';
 
-const abi = token.abi;
+dotenv.config();
+
 const router = Router();
+const abi = token.abi;
 
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
-  (async () => {
-    const { network, amount, recipient } = req.body;
 
-    let missingParam = '';
-    switch (true) {
-      case !network:
-        missingParam = 'network';
-        break;
-      case amount === undefined:
-        missingParam = 'amount';
-        break;
-      case !recipient:
-        missingParam = 'recipient';
-        break;
-    }
-    if (missingParam) {
-      return res.status(400).json({ success: false, error: `缺少参数: ${missingParam}` });
+router.post(
+  '/',
+  asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    const { fromAddress, toAddress, amount } = req.body;
+
+  
+    if (!fromAddress || !toAddress || amount === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: '缺少参数: fromAddress, toAddress 或 amount',
+      });
     }
 
-    // 根据 network 选择 rpc    
-    const rpcMap: Record<string, string> = {
-      ethereum: 'https://eth-sepolia.g.alchemy.com/v2/NqV4OiKFv5guVW6t0Gd-HUyKurubau5L',
-    //   goerli: 'https://goerli.infura.io/v3/你的key',
-    //   polygon: 'https://polygon-rpc.com',
-      
-    };
-    const rpc = rpcMap[network];
-    if (!rpc) {
-      return res.status(400).json({ success: false, error: `不支持的网络: ${network}` });
+  
+    const RPC_URL = process.env.IMUA_RPC_URL!;
+    const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS!;
+    const PRIVATE_KEY = process.env.PRIVATE_KEY!;
+
+    if (!RPC_URL || !CONTRACT_ADDRESS || !PRIVATE_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: '环境变量配置缺失（IMUA_RPC_URL / CONTRACT_ADDRESS / PRIVATE_KEY）',
+      });
     }
 
-    const contractAddress = process.env.CONTRACT_ADDRESS;
-    if (!contractAddress) {
-      return res.status(500).json({ success: false, error: '合约地址未配置' });
+    try {
+
+      const provider = new JsonRpcProvider(RPC_URL);
+      const wallet = new Wallet(PRIVATE_KEY, provider);
+      const contract = new Contract(CONTRACT_ADDRESS, abi, wallet);
+
+
+      const amountParsed = parseEther(amount.toString());
+
+      const tx = await contract.lockImaAndRequestMint(toAddress, amountParsed);
+      const receipt = await tx.wait();
+      const sourceFromTxHash = tx.hash;
+      console.log('锁币成功，交易Hash:', sourceFromTxHash);
+
+      // 存入数据库Hash
+      const record = new LockRecord({
+        fromAddress,
+        toAddress,
+        amount,
+        sourceFromTxHash,
+        timestamp: new Date(),
+      });
+      await record.save();
+
+      res.json({
+        success: true,
+        txHash: sourceFromTxHash,
+        receipt,
+      });
+    } catch (error: any) {
+      console.error('[锁币交互失败]', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || '合约交互失败',
+      });
     }
-
-    const provider = new JsonRpcProvider(rpc);
-    const wallet = new Wallet(process.env.PRIVATE_KEY!, provider);
-    const contract = new Contract(contractAddress, abi, wallet);
-
-   
-    const amountParsed = parseEther(amount.toString());
-    const tx = await contract.transfer(recipient, amountParsed);
-    const receipt = await tx.wait();
-
-    res.json({ success: true, txHash: tx.hash, receipt });
-  })().catch((error: any) => {
-    res.status(500).json({ success: false, error: error.message });
-  });
-});
+  })
+);
 
 export default router;

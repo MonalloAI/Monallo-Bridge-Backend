@@ -9,7 +9,7 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-app.use('/api/contract', contractRoutes);
+app.use('/api/lock', contractRoutes);
 // 路由直接连接在
 app.use('/api', lockRoutes);
 // 连接数据库

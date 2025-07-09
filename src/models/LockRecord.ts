@@ -5,7 +5,7 @@ export interface IUser extends Document {
   toAddress: string;
   amount: string;
   txHash: string;
-  status: string;
+  status: 'pending' | 'processed';
   timestamp: Date;
 }
 
@@ -14,7 +14,7 @@ const lockSchema: Schema = new Schema({
   toAddress : { type: String, required: true },
   amount: { type: String, required: true },
   txHash: { type: String, required: true },
-  status: { type: String, enum: ['pending', 'processed'], default: 'pending'}, 
+  status: { type: String, enum: ['pending', 'processed'], default: 'pending' },
   timestamp: { type: Date, default: Date.now }
 });
 
