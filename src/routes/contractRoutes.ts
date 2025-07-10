@@ -1,11 +1,14 @@
-/**
- * 锁币路由：执行合约交互并存储记录
- */
 import { Router, Request, Response, NextFunction } from 'express';
-import { JsonRpcProvider, Wallet, Contract, parseEther } from 'ethers';
+import {
+  JsonRpcProvider,
+  Wallet,
+  Contract,
+  parseEther,
+  formatEther
+} from 'ethers';
 import dotenv from 'dotenv';
 import token from '../abi/abi.json';
-import LockRecord from '../models/LockRecord'; 
+import LockRecord from '../models/LockRecord';
 import { asyncHandler } from '../utils/asyncHandler';
 
 dotenv.config();
@@ -13,13 +16,11 @@ dotenv.config();
 const router = Router();
 const abi = token.abi;
 
-
 router.post(
   '/',
   asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const { fromAddress, toAddress, amount } = req.body;
 
-  
     if (!fromAddress || !toAddress || amount === undefined) {
       return res.status(400).json({
         success: false,
@@ -27,7 +28,6 @@ router.post(
       });
     }
 
-  
     const RPC_URL = process.env.IMUA_RPC_URL!;
     const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS!;
     const PRIVATE_KEY = process.env.PRIVATE_KEY!;
@@ -40,25 +40,46 @@ router.post(
     }
 
     try {
-
       const provider = new JsonRpcProvider(RPC_URL);
       const wallet = new Wallet(PRIVATE_KEY, provider);
       const contract = new Contract(CONTRACT_ADDRESS, abi, wallet);
 
-
       const amountParsed = parseEther(amount.toString());
 
-      const tx = await contract.lockImaAndRequestMint(toAddress, amountParsed);
+      const walletAddress = wallet.address;
+      const balance = await provider.getBalance(walletAddress);
+      console.log('钱包地址:', walletAddress);
+      console.log('钱包余额:', formatEther(balance), 'IMUA');
+
+      if (balance < amountParsed) {
+        return res.status(400).json({
+          success: false,
+          error: `钱包余额不足（当前余额 ${formatEther(balance)} IMUA，所需 ${amount} IMUA）`,
+        });
+      }
+
+      const tx = await contract.lock(toAddress, {
+        value: amountParsed,
+      });
+
       const receipt = await tx.wait();
       const sourceFromTxHash = tx.hash;
+
       console.log('锁币成功，交易Hash:', sourceFromTxHash);
 
-      // 存入数据库Hash
+      const lockedLog = receipt.logs?.find((log: any) => {
+        return log.fragment?.name === 'Locked';
+      });
+
+      const fee = lockedLog?.args?.fee?.toString() || null;
+
       const record = new LockRecord({
         fromAddress,
         toAddress,
         amount,
         sourceFromTxHash,
+        fee,
+        status: 'pending',
         timestamp: new Date(),
       });
       await record.save();
@@ -66,6 +87,7 @@ router.post(
       res.json({
         success: true,
         txHash: sourceFromTxHash,
+        fee,
         receipt,
       });
     } catch (error: any) {
@@ -73,6 +95,7 @@ router.post(
       res.status(500).json({
         success: false,
         error: error.message || '合约交互失败',
+        details: error,
       });
     }
   })
