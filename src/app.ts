@@ -2,15 +2,15 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import lockRoutes from './routes/lockRoutes';
-import contractRoutes from './routes/contractRoutes';
+// import contractRoutes from './routes/contractRoutes(保留)';
+import cors from 'cors';
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-
-app.use('/api/lock', contractRoutes);
-// 路由直接连接在
+app.use(cors());
+// app.use('/api/lock', contractRoutes);
 app.use('/api', lockRoutes);
 // 连接数据库
 mongoose.connect(process.env.MONGO_URI || '', {
