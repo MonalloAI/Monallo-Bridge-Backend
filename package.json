@@ -13,12 +13,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^17.0.0",
     "ethers": "^6.15.0",
     "express": "^5.1.0",
     "mongoose": "^8.16.1"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.8",
     "ts-node-dev": "^2.0.0",
