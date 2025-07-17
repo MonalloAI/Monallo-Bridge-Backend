@@ -7,6 +7,7 @@ import  cross  from "./routes/cross";
 import users from './routes/users'
 import logs from "./routes/logs";
 import cors from 'cors';
+import authorization  from './routes/authorization';
 
 dotenv.config();
 
@@ -14,7 +15,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 // app.use('/api/lock', contractRoutes);
-app.use('/api',cross, users, logs);
+app.use('/api',cross, users, logs,authorization);
 // 连接数据库
 mongoose.connect(process.env.MONGO_URI || '', {
 })
