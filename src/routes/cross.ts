@@ -55,24 +55,24 @@ router.get(
 // ========== 迁移自 lockRoutes.ts 的接口 ===========
 
 // 获取所有锁定记录（跨链锁定）
-router.get('/allCrossLock', async (_req: Request, res: Response, next: NextFunction) => {
-  try {
-    const allLocks = await CrossBridgeRecord.find({}).select({
-      sourceFromAddress: 1,
-      targetToAddress: 1,
-      sourceFromAmount: 1,
-      sourceFromTxHash: 1,
-      sourceFromHandingFee: 1,
-      sourceFromTxStatus: 1,
-      crossBridgeStatus: 1,
-      createdAt: 1,
-      updatedAt: 1,
-    });
-    res.json(allLocks);
-  } catch (error) {
-    next(error);
-  }
-});
+// router.get('/allCrossLock', async (_req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const allLocks = await CrossBridgeRecord.find({}).select({
+//       sourceFromAddress: 1,
+//       targetToAddress: 1,
+//       sourceFromAmount: 1,
+//       sourceFromTxHash: 1,
+//       sourceFromHandingFee: 1,
+//       sourceFromTxStatus: 1,
+//       crossBridgeStatus: 1,
+//       createdAt: 1,
+//       updatedAt: 1,
+//     });
+//     res.json(allLocks);
+//   } catch (error) {
+//     next(error);
+//   }
+// });
 
 // 根据 sourceFromTxHash 获取锁定记录
 router.get(
@@ -152,36 +152,40 @@ router.get(
 router.post(
   '/crossLockInfo',
   asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-    const { fromAddress, toAddress, amount, sourceFromTxHash, fee } = req.body;
-    if (!fromAddress || !toAddress || !amount || !sourceFromTxHash) {
+    const { sourceFromAddress, targetToAddress, sourceFromAmount, sourceFromTxHash, sourceFromHandingFee, sourceFromRealAmount, targetToReceiveAmount,
+        sourceChainId,sourceChain,sourceRpc,sourceFromTokenName,sourceFromTokenContractAddress, targetChainId,targetChain,targetRpc,targetToTokenName,targetToTokenContractAddress,
+        targetToCallContractAddress,targetToGasStatus,targetToTxHash
+    } = req.body;
+    
+    if (!sourceFromAddress || !targetToAddress || !sourceFromAmount || !sourceFromTxHash) {
       return res.status(400).json({
         success: false,
-        error: '缺少参数: fromAddress, toAddress, amount 或 sourceFromTxHash',
+        error: '缺少参数: sourceFromAddress, targetToAddress , sourceFromAmount 或 sourceFromTxHash',
       });
     }
     try {
       const newLock = new CrossBridgeRecord({
-        sourceChainId: '',
-        sourceChain: '',
-        sourceRpc: '',
-        sourceFromAddress: fromAddress,
-        sourceFromTokenName: '',
-        sourceFromTokenContractAddress: '',
-        sourceFromAmount: amount,
-        sourceFromHandingFee: fee || '',
-        sourceFromRealAmount: amount,
+        sourceChainId: sourceChainId,
+        sourceChain: sourceChain,
+        sourceRpc: sourceRpc,
+        sourceFromAddress: sourceFromAddress,
+        sourceFromTokenName: sourceFromTokenName,
+        sourceFromTokenContractAddress: sourceFromTokenContractAddress,
+        sourceFromAmount: sourceFromAmount,
+        sourceFromHandingFee: sourceFromHandingFee || null,
+        sourceFromRealAmount: sourceFromRealAmount,
         sourceFromTxHash: sourceFromTxHash,
         sourceFromTxStatus: 'pending',
-        targetChainId: '',
-        targetChain: '',
-        targetRpc: '',
-        targetToAddress: toAddress,
-        targetToTokenName: '',
-        targetToTokenContractAddress: '',
-        targetToReceiveAmount: amount,
-        targetToCallContractAddress: '',
-        targetToGasStatus: '',
-        targetToTxHash: '',
+        targetChainId: targetChainId,
+        targetChain: targetChain,
+        targetRpc: targetRpc,
+        targetToAddress: targetToAddress,
+        targetToTokenName: targetToTokenName,
+        targetToTokenContractAddress: targetToTokenContractAddress,
+        targetToReceiveAmount: targetToReceiveAmount,
+        targetToCallContractAddress: targetToCallContractAddress,
+        targetToGasStatus: targetToGasStatus,
+        targetToTxHash:targetToTxHash  ,
         targetToTxStatus: 'pending',
         crossBridgeStatus: 'pending',
       });
